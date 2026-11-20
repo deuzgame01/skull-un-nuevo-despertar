@@ -1,0 +1,133 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================================
+    // 1. FUNCIONES DE AUTENTICACIÓN Y AUTORIZACIÓN (PROPIETARIA ÚNICA SKULL)
+    // =========================================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAuthorizedEmail() {
+      return isAuthenticated()
+        && request.auth.token.email != null
+        && (
+          request.auth.token.email == 'deuzgame01@gmail.com' ||
+          request.auth.token.email == 'admin@skullpiercing.com'
+        );
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        (
+          exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active != false
+        ) ||
+        isAuthorizedEmail()
+      );
+    }
+
+    // =========================================================================
+    // 2. VALIDACIONES DE INTEGRIDAD DE ESQUEMA EN EL SERVIDOR
+    // =========================================================================
+    function isValidCategory(data) {
+      return data.name is string
+        && data.name.size() >= 2
+        && data.name.size() <= 80
+        && data.slug is string
+        && data.slug.size() >= 2
+        && data.isActive is bool;
+    }
+
+    function isValidProduct(data) {
+      return data.name is string
+        && data.name.size() >= 2
+        && data.name.size() <= 140
+        && data.slug is string
+        && data.price is number
+        && data.price >= 0
+        && data.categoryId is string
+        && data.isActive is bool
+        && data.isFeatured is bool
+        && data.stockStatus in ['in_stock', 'low_stock', 'out_of_stock', 'on_request'];
+    }
+
+    function isValidSettings(data) {
+      return data.brand is map
+        && data.whatsapp is map;
+    }
+
+    // =========================================================================
+    // 3. REGLAS POR COLECCIÓN
+    // =========================================================================
+
+    // Categorías: Lectura pública (visitantes sin cuenta), escritura exclusiva Propietaria
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidCategory(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Productos: Lectura pública (visitantes sin cuenta), escritura exclusiva Propietaria
+    match /products/{productId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidProduct(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Configuración global (Marca, Carrusel y WhatsApp): Lectura pública, escritura exclusiva Propietaria
+    match /settings/{settingId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidSettings(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Registro de Administradores Autorizados
+    match /admins/{adminUid} {
+      allow read: if isAuthenticated() && request.auth.uid == adminUid;
+      allow create, update: if isAuthenticated()
+        && request.auth.uid == adminUid
+        && isAuthorizedEmail();
+      allow delete: if false;
+    }
+
+    // Citas: cualquier visitante puede crear una (sin iniciar sesión),
+    // pero solo la propietaria puede leerlas, cambiar su estado o borrarlas.
+    function isValidAppointment(data) {
+      return data.slotId is string
+        && data.customerName is string
+        && data.customerName.size() >= 2
+        && data.phone is string
+        && data.bodyZone is string
+        && data.date is string
+        && data.time is string
+        && data.status in ['pending', 'confirmed', 'cancelled', 'completed'];
+    }
+
+    match /appointments/{appointmentId} {
+      allow read: if isAdmin();
+      allow create: if isValidAppointment(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    // Horarios ocupados: lectura pública para deshabilitarlos en el calendario.
+    // Firestore rechaza un `create` si el documento ya existe, lo que garantiza
+    // que dos personas no puedan tomar el mismo día y hora.
+    match /appointmentSlots/{slotId} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(
+        ['id', 'date', 'time', 'appointmentId']
+      );
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // Bloqueo por defecto a cualquier otra ruta no declarada
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

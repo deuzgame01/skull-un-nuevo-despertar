@@ -1,0 +1,48 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAuthorizedEmail() {
+      return isAuthenticated()
+        && request.auth.token.email != null
+        && (
+          request.auth.token.email == 'deuzgame01@gmail.com' ||
+          request.auth.token.email == 'admin@skullpiercing.com'
+        );
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid)) ||
+        isAuthorizedEmail()
+      );
+    }
+
+    function isValidImageUpload() {
+      return request.resource != null
+        && request.resource.contentType.matches('image/(webp|jpeg|png|avif|gif)')
+        && request.resource.size < 5 * 1024 * 1024; // Máximo 5 MB por archivo
+    }
+
+    // Carpetas oficiales del catálogo (products, categories, brand)
+    match /{folder}/{allPaths=**} {
+      allow read: if folder in ['products', 'categories', 'brand'];
+      allow create, update: if folder in ['products', 'categories', 'brand']
+        && isAdmin()
+        && isValidImageUpload();
+      allow delete: if folder in ['products', 'categories', 'brand']
+        && isAdmin();
+    }
+
+    // Bloqueo explícito a cualquier otra ruta del bucket
+    match /{allOtherPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
