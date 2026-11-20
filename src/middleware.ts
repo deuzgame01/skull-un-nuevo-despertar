@@ -1,18 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { getAdminEmails } from '@/lib/admin-emails';
 
 const ADMIN_SESSION_COOKIE = 'skull_admin_session';
 
 function isAuthorizedEmail(email?: string): boolean {
   if (!email) return false;
   const cleanEmail = email.trim().toLowerCase();
-  const rawList =
-    process.env.NEXT_PUBLIC_ADMIN_EMAILS ||
-    'deuzgame01@gmail.com,admin@skullpiercing.com';
-  const allowed = rawList
-    .split(',')
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-  return allowed.includes(cleanEmail);
+  return getAdminEmails().includes(cleanEmail);
 }
 
 interface ParsedSession {

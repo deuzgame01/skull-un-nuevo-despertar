@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
+import { getPrimaryAdminEmail } from '@/lib/admin-emails';
 
 function AdminLoginContent() {
   const {
@@ -36,7 +37,7 @@ function AdminLoginContent() {
   const expiredParam = searchParams.get('expired') === '1';
 
   const [mode, setMode] = useState<'login' | 'recovery'>('login');
-  const [email, setEmail] = useState('deuzgame01@gmail.com');
+  const [email, setEmail] = useState(getPrimaryAdminEmail);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -230,7 +231,7 @@ function AdminLoginContent() {
                       autoComplete="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="deuzgame01@gmail.com"
+                      placeholder={getPrimaryAdminEmail()}
                       className="w-full pl-10 pr-3.5 py-2.5 rounded-sm bg-[#F6F3EE] border border-[#DCCFC0] text-sm text-[#21162C] placeholder:text-[#9A8FA8] focus:outline-none focus:border-[#5B2B84]"
                     />
                   </div>
@@ -352,7 +353,7 @@ function AdminLoginContent() {
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="deuzgame01@gmail.com"
+                        placeholder={getPrimaryAdminEmail()}
                         className="w-full pl-10 pr-3.5 py-2.5 rounded-sm bg-[#F6F3EE] border border-[#DCCFC0] text-sm text-[#21162C] placeholder:text-[#9A8FA8] focus:outline-none focus:border-[#5B2B84]"
                       />
                     </div>

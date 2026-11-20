@@ -2,6 +2,7 @@ import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
+import { getAdminEmails } from '@/lib/admin-emails';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -37,14 +38,7 @@ if (isFirebaseConfigured) {
 
 /** Correos con permisos de propietaria, definidos en NEXT_PUBLIC_ADMIN_EMAILS. */
 export function getAuthorizedAdminEmails(): string[] {
-  const rawList =
-    process.env.NEXT_PUBLIC_ADMIN_EMAILS ||
-    'deuzgame01@gmail.com,admin@skullpiercing.com';
-
-  return rawList
-    .split(',')
-    .map((email) => email.trim().toLowerCase())
-    .filter((email) => email.length > 0);
+  return getAdminEmails();
 }
 
 export function isEmailAuthorizedAdmin(email?: string | null): boolean {
