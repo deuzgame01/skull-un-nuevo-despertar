@@ -29,6 +29,9 @@ yarn-error.log*
 .env*.local
 .env
 
+# netlify (caché de build y output local)
+/.netlify/
+
 # vercel
 .vercel
 
